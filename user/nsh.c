@@ -8,7 +8,6 @@
 #define PIPE  3
 #define MAXARGS 10
 
-//暂时禁用pipe redir
 
 static char buf[100];
 //static char pipeArgv[MAXARGS][100];
