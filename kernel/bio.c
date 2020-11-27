@@ -47,22 +47,27 @@ struct {
 //head的next指向最后一个，初始化为自己;prev指向自己
 //普通buffer的next指向NULL，prev指向上一个：也就是head的next
 
+
 void
 binit(void)
 {
     int i;
+    struct buf *b;
     for(i=0;i<NBUCKETS;i++){
         initlock(&bcache.lock[i], "bcache");
-        bcache.hashbucket[i].prev = &bcache.hashbucket[i];
-        bcache.hashbucket[i].next = &bcache.hashbucket[i];
+        b = &bcache.hashbucket[i];
+        b->prev = b;
+        b->next = b;
     }
 
-    struct buf *b;
     // Create linked list of buffers
     for(b = bcache.buf; b < bcache.buf+NBUF; b++){
+        b->next = bcache.hashbucket[0].next;
+        b->prev = &bcache.hashbucket[0];
         initsleeplock(&b->lock, "buffer");
+        bcache.hashbucket[0].next->prev = b;
+        bcache.hashbucket[0].next = b;
     }
-
 
 }
 
@@ -100,6 +105,9 @@ bget(uint dev, uint blockno)
             b->blockno = blockno;
             b->valid = 0;
             b->refcnt = 1;
+
+            b->next->prev = b->prev;
+            b->prev->next = b->next;
 
             b->prev = &bcache.hashbucket[Hash(blockno)];
             b->next = bcache.hashbucket[Hash(blockno)].next;
@@ -158,7 +166,10 @@ brelse(struct buf *b)
     // no one is waiting for it.
     b->next->prev = b->prev;
     b->prev->next = b->next;
-
+    b->next = bcache.hashbucket[Hash(b->blockno)].next;
+    b->prev = &bcache.hashbucket[Hash(b->blockno)];
+    bcache.hashbucket[Hash(b->blockno)].next->prev = b;
+    bcache.hashbucket[Hash(b->blockno)].next = b;
     //可能我要进行一些额外操作,比如修改valid之类的
     //不过既然refcnt == 0 , 那下次它应该会被带走的
   }
