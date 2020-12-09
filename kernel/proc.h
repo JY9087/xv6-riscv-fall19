@@ -103,4 +103,16 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+
+  //处理函数入口。这里的函数是Sigalarm
+  void (* cb_handler)();
+  //时间计数器
+  int cb_ticks;
+  //时间间隔；达到interval会触发sigalarm
+  int cb_interval;
+  //0:不在运行  1：在运行
+  int cb_running;
+  //TrapFrame，保存UserRegisters
+  struct trapframe cb_snapshot;
 };

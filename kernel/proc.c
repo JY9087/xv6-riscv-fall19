@@ -123,6 +123,13 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  
+  //初始化alarm
+  p->cb_ticks = 0;
+  //禁用时间间隔；不会触发
+  p->cb_interval = -1;
+  p->cb_running = 0;
+
   return p;
 }
 

@@ -77,8 +77,24 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2){
+    
+    //p->cb_interval > 0 : 启用Sigalarm
+    //cb_ticks++ 增加tick计时器
+    //大于等于interval则超时，进行处理
+    //同一时刻，进程应该只允许一个Sigalarm：不能已经在running
+    if (p->cb_interval > 0 && p->cb_ticks++ >= p->cb_interval && !p->cb_running)
+    {
+      //保存TrapFrame
+      p->cb_snapshot = *p->tf;
+      p->cb_running = 1;
+      //将新的TrapFrame的PC设置为handler(Sigalarm):执行Sigalarm
+      p->tf->epc = (uint64)p->cb_handler;
+    }
+
     yield();
+  }
+    
 
   usertrapret();
 }
