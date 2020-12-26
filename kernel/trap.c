@@ -67,12 +67,51 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
+  } else if (r_scause() == 15) {
+    //只处理写入页错误：15 = Store Page Fault 
+    uint64 va = r_stval();
+    uint64 pageva = PGROUNDDOWN(va);
+    //找到对应的PTE
+    pte_t *pte = walkpte(p->pagetable, pageva);
+    if (pte == 0) {
+      printf("usertrap@15: no pte found\n");
+      p->killed = 1;
+      goto stop_early;
+    }
+
+    //如果copy on write,而且page合法(Valid)，用户模式可访问(User)
+    //在写入时创建新的页，并修改PTE
+    if ((*pte & PTE_COW) && (*pte & PTE_V) && (*pte & PTE_U)) {
+      char *mem = kalloc();
+      if (mem == 0)
+      {
+        p->killed = 1;
+        goto stop_early;
+      }
+      uint64 pa = PTE2PA(*pte);
+      //复制原内容
+      memmove(mem, (char *)pa, PGSIZE);
+
+      //去除cow标记，真正的标记为Write
+      uint flags = PTE_FLAGS(*pte);
+      flags &= ~PTE_COW;
+      flags |= PTE_W;
+      //传递参数do_free=1，kdrop一次对pa的引用
+      uvmunmap(p->pagetable, pageva, PGSIZE, 1);
+      if (mappages(p->pagetable, pageva, PGSIZE, (uint64)mem, flags) != 0)
+      {
+        kfree(mem);
+        p->killed = 1;
+        goto stop_early;
+      }
+    }
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
   }
 
+stop_early:
   if(p->killed)
     exit(-1);
 

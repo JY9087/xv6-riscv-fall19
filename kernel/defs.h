@@ -9,6 +9,12 @@ struct sleeplock;
 struct stat;
 struct superblock;
 
+
+//cow
+void            kdrop(void *);
+uint8           kborrow(void *);
+pte_t*          walkpte(pagetable_t, uint64);
+
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
