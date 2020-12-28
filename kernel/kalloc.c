@@ -32,7 +32,7 @@ void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
-  assert(PHYSTOP % PGSIZE == 0);
+  //assert(PHYSTOP % PGSIZE == 0);
   //reference count数组
   kmem.rc = (uint8 *)end;
   //分配rc数组的内存
